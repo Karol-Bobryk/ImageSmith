@@ -6,6 +6,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QRgb>
+#include <QRgbaFLoat>
 #include <QWidget>
 #include <QtGui/qrgb.h>
 #include "userinpututil.h"
@@ -99,6 +100,26 @@ public:
         float d_alpha = UserInputUtil::deserialize(user_vals[3], InputType::RGBA_UNIT).value_or(0);
 
         return qRgba(d_red, d_green, d_blue, d_alpha);
+    }
+
+    [[nodiscard]] static QRgbaFloat<float> getRgbaFloatFromUser(QWidget *parent)
+    {
+        ModalValueGrabber modal(parent, 4, {"r", "g", "b", "a"});
+        QList user_vals = modal.execModal();
+
+        float d_red = UserInputUtil::deserialize(user_vals[0], InputType::FLOAT).value_or(0);
+        float d_green = UserInputUtil::deserialize(user_vals[1], InputType::FLOAT).value_or(0);
+        float d_blue = UserInputUtil::deserialize(user_vals[2], InputType::FLOAT).value_or(0);
+        float d_alpha = UserInputUtil::deserialize(user_vals[3], InputType::FLOAT).value_or(0);
+
+        QRgbaFloat<float> ret;
+
+        ret.setRed(d_red);
+        ret.setGreen(d_green);
+        ret.setBlue(d_blue);
+        ret.setAlpha(d_alpha);
+
+        return ret;
     }
 
 private:

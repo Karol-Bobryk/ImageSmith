@@ -4,6 +4,7 @@
 std::optional<float> UserInputUtil::deserialize(QString input, InputType type)
 {
     bool ok;
+
     float ret = input.toFloat(&ok);
 
     if (!ok) {

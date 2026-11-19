@@ -3,11 +3,11 @@
 #include <QImageReader>
 #include <QMessageBox>
 #include <QRgb>
+#include <QRgbaFloat>
 #include "./ui_mainwindow.h"
 #include "ImageEffectUtil.h"
 #include "imageeffectprocessor.h"
 #include "modalvaluegrabber.hpp"
-#include "userinpututil.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -72,6 +72,10 @@ void MainWindow::loadImage(bool /* unused */)
 void MainWindow::applyEffect(bool /* unused */)
 {
     // TODO: check for image existing
+    if (image.isNull()) {
+        QMessageBox::information(this, "Failed to apply a filter", "You have to load an image");
+        return;
+    }
     ImageEffect effect = ImageEffectUtil::getEffectById(ui->comboBox->currentIndex());
 
     switch (effect) {
@@ -79,6 +83,41 @@ void MainWindow::applyEffect(bool /* unused */)
         QRgb d_rgba = ModalValueGrabber::getRgbaFromUser(this);
 
         image = ImageEffectProcessor::applyAdditionEffect(image, d_rgba);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+        break;
+    }
+    case ImageEffect::SUBSTRACT_VALUE: {
+        QRgb d_rgba = ModalValueGrabber::getRgbaFromUser(this);
+
+        image = ImageEffectProcessor::applySubstractionEffect(image, d_rgba);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+        break;
+    }
+    case ImageEffect::MULTIPLY_VALUE: {
+        QRgbaFloat<float> d_rgba = ModalValueGrabber::getRgbaFloatFromUser(this);
+
+        image = ImageEffectProcessor::applyMultiplicationEffect(image, d_rgba);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+        break;
+    }
+
+    case ImageEffect::DIVIDE_VALUE: {
+        QRgbaFloat<float> d_rgba = ModalValueGrabber::getRgbaFloatFromUser(this);
+
+        float red = d_rgba.red() == 0.0 ? 1 : d_rgba.red();
+        float green = d_rgba.green() == 0.0 ? 1 : d_rgba.green();
+        float blue = d_rgba.blue() == 0.0 ? 1 : d_rgba.blue();
+        float alpha = d_rgba.alpha() == 0.0 ? 1 : d_rgba.alpha();
+
+        d_rgba.setRed(red);
+        d_rgba.setGreen(green);
+        d_rgba.setBlue(blue);
+        d_rgba.setAlpha(alpha);
+
+        image = ImageEffectProcessor::applyDivideEffect(image, d_rgba);
 
         ui->image_label->setPixmap(QPixmap::fromImage(image));
         break;
