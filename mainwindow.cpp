@@ -2,8 +2,12 @@
 #include <QFileDialog>
 #include <QImageReader>
 #include <QMessageBox>
+#include <QRgb>
 #include "./ui_mainwindow.h"
 #include "ImageEffectUtil.h"
+#include "imageeffectprocessor.h"
+#include "modalvaluegrabber.hpp"
+#include "userinpututil.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -12,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     connect(ui->load_image_button, &QPushButton::clicked, this, &MainWindow::loadImage);
+    connect(ui->smith_button, &QPushButton::clicked, this, &MainWindow::applyEffect);
 }
 
 void MainWindow::setupComboBox()
@@ -62,6 +67,23 @@ void MainWindow::loadImage(bool /* unused */)
     }
 
     ui->image_label->setPixmap(QPixmap::fromImage(image));
+}
+
+void MainWindow::applyEffect(bool /* unused */)
+{
+    // TODO: check for image existing
+    ImageEffect effect = ImageEffectUtil::getEffectById(ui->comboBox->currentIndex());
+
+    switch (effect) {
+    case ImageEffect::ADD_VALUE: {
+        QRgb d_rgba = ModalValueGrabber::getRgbaFromUser(this);
+
+        image = ImageEffectProcessor::applyAdditionEffect(image, d_rgba);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+        break;
+    }
+    }
 }
 
 MainWindow::~MainWindow()

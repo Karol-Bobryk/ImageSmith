@@ -8,7 +8,7 @@ class ImageEffectProcessor
 public:
     ImageEffectProcessor();
 
-    static QImage applyAdditionEffect(QImage oldImage, int value = 0);
+    static QImage applyAdditionEffect(QImage oldImage, QRgb value);
 };
 
 #endif // IMAGEEFFECTPROCESSOR_H

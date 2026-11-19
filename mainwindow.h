@@ -25,5 +25,6 @@ private:
     QImage image;
 private slots:
     void loadImage(bool /* unused */);
+    void applyEffect(bool /* unused */);
 };
 #endif // MAINWINDOW_H
