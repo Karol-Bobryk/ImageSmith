@@ -122,6 +122,15 @@ void MainWindow::applyEffect(bool /* unused */)
         ui->image_label->setPixmap(QPixmap::fromImage(image));
         break;
     }
+
+    case ImageEffect::CHANGE_BRIGHTNESS: {
+        float ratio = ModalValueGrabber::getFloatFromUser(this);
+
+        image = ImageEffectProcessor::applyChangeBrightness(image, ratio);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+        break;
+    }
     }
 }
 

@@ -122,6 +122,14 @@ public:
         return ret;
     }
 
+    [[nodiscard]] static float getFloatFromUser(QWidget *parent)
+    {
+        ModalValueGrabber modal(parent, 1, {"value"});
+        QList user_vals = modal.execModal();
+
+        return UserInputUtil::deserialize(user_vals[0], InputType::FLOAT).value_or(0);
+    }
+
 private:
     size_t N;
     std::vector<std::string_view> labels = {};

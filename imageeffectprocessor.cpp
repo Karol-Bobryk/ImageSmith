@@ -92,3 +92,21 @@ QImage ImageEffectProcessor::applyDivideEffect(QImage oldImage, QRgbaFloat<float
 
     return newImage;
 }
+
+QImage ImageEffectProcessor::applyChangeBrightness(QImage oldImage, float ratio)
+{
+    QImage newImage = oldImage.copy();
+
+    for (int y = 0; y < newImage.height(); ++y) {
+        QRgb *line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
+        for (int x = 0; x < newImage.width(); ++x) {
+            QRgb &rgb = line[x];
+            line[x] = qRgba((int) std::min(255.0f, (float) qRed(rgb) * ratio),
+                            (int) std::min(255.0f, (float) qGreen(rgb) * ratio),
+                            (int) std::min(255.0f, (float) qBlue(rgb) * ratio),
+                            qAlpha(rgb));
+        }
+    }
+
+    return newImage;
+}
