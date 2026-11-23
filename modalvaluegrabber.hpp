@@ -6,7 +6,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QRgb>
-#include <QRgbaFLoat>
+#include <QRgbaFloat>
 #include <QWidget>
 #include <QtGui/qrgb.h>
 #include "userinpututil.h"

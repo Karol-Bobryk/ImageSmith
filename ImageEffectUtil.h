@@ -51,6 +51,8 @@ int getEffectId(ImageEffect effect)
         return 11;
     case ImageEffect::CONVOLUTION:
         return 12;
+    default:
+        throw std::runtime_error("Invalid ImageEffect value");
     }
 };
 
