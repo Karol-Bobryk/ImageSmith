@@ -131,6 +131,21 @@ void MainWindow::applyEffect(bool /* unused */)
         ui->image_label->setPixmap(QPixmap::fromImage(image));
         break;
     }
+    case ImageEffect::CONVERT_TO_GRAYSCALE_1: {
+        image = ImageEffectProcessor::applyGrayscaleConversionColorometric(image);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+
+        break;
+    }
+
+    case ImageEffect::CONVERT_TO_GRAYSCALE_2: {
+        image = ImageEffectProcessor::applyGrayscaleConversionLinear(image);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+
+        break;
+    }
     }
 }
 

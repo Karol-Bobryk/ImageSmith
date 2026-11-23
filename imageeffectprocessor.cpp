@@ -110,3 +110,47 @@ QImage ImageEffectProcessor::applyChangeBrightness(QImage oldImage, float ratio)
 
     return newImage;
 }
+
+QImage ImageEffectProcessor::applyGrayscaleConversionColorometric(QImage oldImage)
+{
+    QImage newImageGrayscale(oldImage.width(), oldImage.height(), QImage::Format::Format_Grayscale8);
+
+    for (int y = 0; y < oldImage.height(); ++y) {
+        const QRgb *line = reinterpret_cast<const QRgb *>(oldImage.scanLine(y));
+        quint8 *new_line = reinterpret_cast<quint8 *>(newImageGrayscale.scanLine(y));
+
+        for (int x = 0; x < oldImage.width(); ++x) {
+            QRgb const &rgb = line[x];
+            quint8 &gray = new_line[x];
+
+            gray = (quint8) std::min(255,
+                                     (int) (0.2126f * (float) qRed(rgb)
+                                            + 0.7152f * (float) qGreen(rgb)
+                                            + 0.0722f * (float) qBlue(rgb)));
+        }
+    }
+
+    return newImageGrayscale;
+}
+
+QImage ImageEffectProcessor::applyGrayscaleConversionLinear(QImage oldImage)
+{
+    QImage newImageGrayscale(oldImage.width(), oldImage.height(), QImage::Format::Format_Grayscale8);
+
+    for (int y = 0; y < oldImage.height(); ++y) {
+        const QRgb *line = reinterpret_cast<const QRgb *>(oldImage.scanLine(y));
+        quint8 *new_line = reinterpret_cast<quint8 *>(newImageGrayscale.scanLine(y));
+
+        for (int x = 0; x < oldImage.width(); ++x) {
+            QRgb const &rgb = line[x];
+            quint8 &gray = new_line[x];
+
+            gray = (quint8) std::min(255,
+                                     (int) ((0.33f) * (float) qRed(rgb)
+                                            + (0.33f) * (float) qGreen(rgb)
+                                            + (0.33f) * (float) qBlue(rgb)));
+        }
+    }
+
+    return newImageGrayscale;
+}
