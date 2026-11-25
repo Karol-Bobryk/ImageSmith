@@ -146,6 +146,13 @@ void MainWindow::applyEffect(bool /* unused */)
 
         break;
     }
+    case ImageEffect::SMOOTHING_FILTER: {
+        image = ImageEffectProcessor::applySmoothingFilter(image);
+
+        ui->image_label->setPixmap(QPixmap::fromImage(image));
+
+        break;
+    }
     }
 }
 

@@ -13,6 +13,9 @@ QImage applyDivideEffect(QImage oldImage, QRgbaFloat<float> value);
 QImage applyChangeBrightness(QImage oldImage, float ratio);
 QImage applyGrayscaleConversionColorometric(QImage oldImage);
 QImage applyGrayscaleConversionLinear(QImage oldImage);
+// filters
+QImage applySmoothingFilter(QImage oldImage);
+QImage applyConvolution(QImage oldImage);
 
 }; // namespace ImageEffectProcessor
 

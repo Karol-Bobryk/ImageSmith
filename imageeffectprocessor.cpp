@@ -1,4 +1,5 @@
 #include "imageeffectprocessor.h"
+#include "convolutionutil.h"
 #include "userinpututil.h"
 
 #include <QRgbaFloat16>
@@ -153,4 +154,45 @@ QImage ImageEffectProcessor::applyGrayscaleConversionLinear(QImage oldImage)
     }
 
     return newImageGrayscale;
+}
+
+QImage ImageEffectProcessor::applySmoothingFilter(QImage oldImage)
+{
+    QImage newImage(oldImage.width(), oldImage.height(), QImage::Format::Format_RGB32);
+
+    std::vector<std::vector<float>> mask = {
+        {1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0},
+        {1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0},
+        {1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0},
+    };
+    // TODO: add dividing by sum of all elems
+
+    int height_offset = mask.size() / 2;
+    int width_offset = mask[0].size() / 2;
+
+    for (int y = height_offset; y < oldImage.height() - height_offset; ++y) {
+        std::vector<QRgb *> scanlines(mask.size());
+        for (int h = -height_offset; h <= height_offset; ++h)
+            scanlines[h + height_offset] = reinterpret_cast<QRgb *>(oldImage.scanLine(y + h));
+
+        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
+
+        std::vector<QRgb *> matrix_start(mask.size());
+
+        for (int x = width_offset; x < oldImage.width() - width_offset; ++x) {
+            for (int h = -height_offset; h <= height_offset; ++h)
+                matrix_start[h + height_offset] = scanlines[h + height_offset] + x - 1;
+
+            QRgb &new_rgb = new_line[x];
+
+            // TODO: add mask convolution
+            auto [red_conv,
+                  green_conv,
+                  blue_conv] = ConvolutionUtil::convolution(matrix_start, mask, 3, 3);
+
+            new_rgb = qRgb(qRed((int) red_conv), qGreen((int) green_conv), qBlue((int) blue_conv));
+        }
+    }
+
+    return newImage;
 }
