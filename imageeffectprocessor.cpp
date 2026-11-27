@@ -192,7 +192,8 @@ QImage ImageEffectProcessor::applySmoothingFilter(QImage oldImage)
     for (int y = 0; y < height_offset; ++y) {
         std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
                                                          y - height_offset,
-                                                         y + height_offset);
+                                                         y + height_offset,
+                                                         fake_scanline.data());
 
         QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
 
@@ -203,7 +204,8 @@ QImage ImageEffectProcessor::applySmoothingFilter(QImage oldImage)
     for (int y = oldImage.height() - height_offset; y < oldImage.height(); ++y) {
         std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
                                                          y - height_offset,
-                                                         y + height_offset);
+                                                         y + height_offset,
+                                                         fake_scanline.data());
 
         QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
 
@@ -282,11 +284,14 @@ std::vector<QRgb *> ImageEffectProcessor::getScanlineRange(QImage image,
     size_t ret_size = range_end - range_start + 1;
     std::vector<QRgb *> ret(ret_size, nullptr);
 
-    for (size_t i = 0; i < ret_size; ++i)
-        if (i < 0 || i > image.height())
+    for (size_t i = 0; i < ret_size; ++i) {
+        int y_pos = range_start + i;
+
+        if (y_pos < 0 || y_pos >= image.height())
             ret[i] = fake_scanline;
         else
-            ret[i] = reinterpret_cast<QRgb *>(image.scanLine(range_start + i));
+            ret[i] = reinterpret_cast<QRgb *>(image.scanLine(y_pos));
+    }
 
     return ret;
 }
