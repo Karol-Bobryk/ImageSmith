@@ -1,5 +1,4 @@
 #include "imageeffectprocessor.h"
-#include "convolutionutil.h"
 #include "userinpututil.h"
 
 #include <QRgbaFloat16>
@@ -156,101 +155,28 @@ QImage ImageEffectProcessor::applyGrayscaleConversionLinear(QImage oldImage)
     return newImageGrayscale;
 }
 
-QImage ImageEffectProcessor::applySmoothingFilter(QImage oldImage)
+std::tuple<float, float, float> ImageEffectProcessor::transformSmoothingFilter(
+    std::vector<QRgb *> &data, size_t N, size_t M, std::vector<std::vector<float>> mask)
 {
-    QImage newImage(oldImage.width(), oldImage.height(), QImage::Format::Format_RGB32);
+    float red_sum = 0.0f;
+    float green_sum = 0.0f;
+    float blue_sum = 0.0f;
 
-    std::vector<std::vector<float>> mask = {
-        {1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0},
-        {1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0},
-        {1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0},
-    };
-    // TODO: add dividing by sum of all elems
-
-    const size_t mask_height = mask.size();
-    const size_t mask_width = mask[0].size();
-
-    const int height_offset = mask.size() / 2;
-    const int width_offset = mask[0].size() / 2;
-
-    // middle
-    for (int y = height_offset; y < oldImage.height() - height_offset; ++y) {
-        std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
-                                                         y - height_offset,
-                                                         y + height_offset);
-
-        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
-
-        convoluteScanline(scanlines, mask, new_line, oldImage.width(), width_offset);
-    }
-
-    const size_t fake_scanline_size = std::max(oldImage.width(), oldImage.height());
-    constexpr unsigned int fake_scanline_default_value = 0x00000000;
-    std::vector<QRgb> fake_scanline(fake_scanline_size, fake_scanline_default_value);
-
-    // top border no corners
-    for (int y = 0; y < height_offset; ++y) {
-        std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
-                                                         y - height_offset,
-                                                         y + height_offset,
-                                                         fake_scanline.data());
-
-        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
-
-        convoluteScanline(scanlines, mask, new_line, oldImage.width(), width_offset);
-    }
-
-    // bottom border no corners
-    for (int y = oldImage.height() - height_offset; y < oldImage.height(); ++y) {
-        std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
-                                                         y - height_offset,
-                                                         y + height_offset,
-                                                         fake_scanline.data());
-
-        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
-
-        convoluteScanline(scanlines, mask, new_line, oldImage.width(), width_offset);
-    }
-
-    // side border with corners
-    for (int y = 0; y < oldImage.height(); ++y) {
-        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
-        // left
-        for (int x = 0; x < width_offset; ++x) {
-            std::vector<std::vector<QRgb>> matrix = createRgbMatrixFromImage(oldImage,
-                                                                             x,
-                                                                             y,
-                                                                             mask_width,
-                                                                             mask_height);
-
-            auto [red_conv, green_conv, blue_conv] = ConvolutionUtil::convolutionByValue(matrix,
-                                                                                         mask);
-
-            new_line[x] = qRgb((int) red_conv, (int) green_conv, (int) blue_conv);
-        }
-
-        // right
-        for (int x = oldImage.width() - width_offset; x < oldImage.width(); ++x) {
-            std::vector<std::vector<QRgb>> matrix = createRgbMatrixFromImage(oldImage,
-                                                                             x,
-                                                                             y,
-                                                                             mask_width,
-                                                                             mask_height);
-
-            auto [red_conv, green_conv, blue_conv] = ConvolutionUtil::convolutionByValue(matrix,
-                                                                                         mask);
-
-            new_line[x] = qRgb((int) red_conv, (int) green_conv, (int) blue_conv);
+    for (int y = 0; y < M; ++y) {
+        for (int x = 0; x < N; ++x) {
+            red_sum += qRed(data[y][x]) * mask[y][x];
+            green_sum += qGreen(data[y][x]) * mask[y][x];
+            blue_sum += qBlue(data[y][x]) * mask[y][x];
         }
     }
-
-    return newImage;
+    return std::make_tuple(red_sum, green_sum, blue_sum);
 }
 
 void ImageEffectProcessor::convoluteScanline(std::vector<QRgb *> scanlines,
                                              std::vector<std::vector<float>> mask,
                                              QRgb *out,
                                              size_t len,
+                                             TransformFunction fnc,
                                              size_t x_offset)
 {
     assert(x_offset < len);
@@ -268,7 +194,8 @@ void ImageEffectProcessor::convoluteScanline(std::vector<QRgb *> scanlines,
         auto [red_conv, green_conv, blue_conv] = ConvolutionUtil::convolution(matrix_start,
                                                                               mask,
                                                                               mask_height,
-                                                                              mask_width);
+                                                                              mask_width,
+                                                                              fnc);
 
         rgb = qRgb((int) red_conv, (int) green_conv, (int) blue_conv);
     }
@@ -318,4 +245,92 @@ std::vector<std::vector<QRgb>> ImageEffectProcessor::createRgbMatrixFromImage(
                 matrix[m_y][m_x] = reinterpret_cast<const QRgb *>(image.constScanLine(y))[x];
 
     return matrix;
+}
+
+QImage ImageEffectProcessor::applyConvolution(QImage oldImage,
+                                              std::vector<std::vector<float>> mask,
+                                              TransformFunction fnc)
+{
+    QImage newImage(oldImage.width(), oldImage.height(), QImage::Format::Format_RGB32);
+
+    const size_t mask_height = mask.size();
+    const size_t mask_width = mask[0].size();
+
+    const int height_offset = mask.size() / 2;
+    const int width_offset = mask[0].size() / 2;
+
+    // middle
+    for (int y = height_offset; y < oldImage.height() - height_offset; ++y) {
+        std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
+                                                         y - height_offset,
+                                                         y + height_offset);
+
+        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
+
+        convoluteScanline(scanlines, mask, new_line, oldImage.width(), fnc, width_offset);
+    }
+
+    const size_t fake_scanline_size = std::max(oldImage.width(), oldImage.height());
+    constexpr unsigned int fake_scanline_default_value = 0x00000000;
+    std::vector<QRgb> fake_scanline(fake_scanline_size, fake_scanline_default_value);
+
+    // top border no corners
+    for (int y = 0; y < height_offset; ++y) {
+        std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
+                                                         y - height_offset,
+                                                         y + height_offset,
+                                                         fake_scanline.data());
+
+        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
+
+        convoluteScanline(scanlines, mask, new_line, oldImage.width(), fnc, width_offset);
+    }
+
+    // bottom border no corners
+    for (int y = oldImage.height() - height_offset; y < oldImage.height(); ++y) {
+        std::vector<QRgb *> scanlines = getScanlineRange(oldImage,
+                                                         y - height_offset,
+                                                         y + height_offset,
+                                                         fake_scanline.data());
+
+        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
+
+        convoluteScanline(scanlines, mask, new_line, oldImage.width(), fnc, width_offset);
+    }
+
+    // side border with corners
+    for (int y = 0; y < oldImage.height(); ++y) {
+        QRgb *new_line = reinterpret_cast<QRgb *>(newImage.scanLine(y));
+        // left
+        for (int x = 0; x < width_offset; ++x) {
+            std::vector<std::vector<QRgb>> matrix = createRgbMatrixFromImage(oldImage,
+                                                                             x,
+                                                                             y,
+                                                                             mask_width,
+                                                                             mask_height);
+
+            auto [red_conv, green_conv, blue_conv] = ConvolutionUtil::convolutionByValue(matrix,
+                                                                                         mask,
+                                                                                         fnc);
+
+            new_line[x] = qRgb((int) red_conv, (int) green_conv, (int) blue_conv);
+        }
+
+        // right
+        for (int x = oldImage.width() - width_offset; x < oldImage.width(); ++x) {
+            std::vector<std::vector<QRgb>> matrix = createRgbMatrixFromImage(oldImage,
+                                                                             x,
+                                                                             y,
+                                                                             mask_width,
+                                                                             mask_height);
+
+            auto [red_conv, green_conv, blue_conv] = ConvolutionUtil::convolutionByValue(matrix,
+                                                                                         mask,
+                                                                                         fnc);
+
+            new_line[x] = qRgb((int) red_conv, (int) green_conv, (int) blue_conv);
+        }
+    }
+
+    return newImage;
 }

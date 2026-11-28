@@ -3,6 +3,7 @@
 
 #include <QImage>
 #include <QRgbaFloat>
+#include "convolutionutil.h"
 
 namespace ImageEffectProcessor {
 
@@ -14,14 +15,20 @@ QImage applyChangeBrightness(QImage oldImage, float ratio);
 QImage applyGrayscaleConversionColorometric(QImage oldImage);
 QImage applyGrayscaleConversionLinear(QImage oldImage);
 // filters
-QImage applySmoothingFilter(QImage oldImage);
-QImage applyConvolution(QImage oldImage);
+std::tuple<float, float, float> transformSmoothingFilter(std::vector<QRgb *> &data,
+                                                         size_t N,
+                                                         size_t M,
+                                                         std::vector<std::vector<float>> mask);
+QImage applyConvolution(QImage oldImage,
+                        std::vector<std::vector<float>> mask,
+                        TransformFunction fnc);
 
 void convoluteScanline(
     std::vector<QRgb *> scanlines,
     std::vector<std::vector<float>> mask,
     QRgb *out,
     size_t len,
+    TransformFunction fnc,
     size_t x_offset = 0 // this is the offset taken from both the left and right of the scanline
 );
 

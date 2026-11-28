@@ -147,7 +147,13 @@ void MainWindow::applyEffect(bool /* unused */)
         break;
     }
     case ImageEffect::SMOOTHING_FILTER: {
-        image = ImageEffectProcessor::applySmoothingFilter(image);
+        std::vector<std::vector<float>> mask = {{1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f},
+                                                {1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f},
+                                                {1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f}};
+        image
+            = ImageEffectProcessor::applyConvolution(image,
+                                                     mask,
+                                                     ImageEffectProcessor::transformSmoothingFilter);
 
         ui->image_label->setPixmap(QPixmap::fromImage(image));
 
